@@ -22,6 +22,9 @@ struct Obstacle;
 #[derive(Component)]
 struct Health(usize);
 
+#[derive(Component)]
+struct HealthInfo;
+
 #[derive(Resource)]
 struct GameState {
     spawn_timer: Timer,
@@ -35,13 +38,14 @@ fn main() {
             spawn_timer: Timer::from_seconds(SPAWN_INTERVAL, TimerMode::Repeating),
         })
         .add_systems(Update, (jump, apply_gravity, player_movement))
-        .add_systems(Update, (spawn_obstacles, move_obstacles, detect_collision))
+        .add_systems(Update, (spawn_obstacles, move_obstacles, detect_collision, render_health_info))
         .run();
 }
 
 fn setup(mut commands: Commands) {
     commands.spawn(Camera2d::default());
-    
+
+    let initial_health = 10;
     // Player
     commands
         .spawn((
@@ -54,9 +58,15 @@ fn setup(mut commands: Commands) {
             },
             Transform::from_xyz(PLAYER_X, GROUND_LEVEL, 0.0),
             Velocity(Vec3::ZERO),
-            Health(10)
+            Health(initial_health)
         ));
-    
+
+    commands.spawn((
+            HealthInfo,
+            Text::new(format!("Health: {}", initial_health))
+        )
+    );
+
     // Ground
     commands.spawn((
         Sprite {
@@ -154,6 +164,17 @@ fn detect_collision(
                 health.0 -= 1;
                 commands.entity(entity).despawn(); // Remove obstacle
             }
+        }
+    }
+}
+
+fn render_health_info(
+    player_query: Query<&mut Health, With<Player>>,
+    mut health_info_query: Query<&mut Text, With<HealthInfo>>,
+) {
+    if let Ok(mut health_info) = health_info_query.get_single_mut() {
+        if let Ok(health) = player_query.get_single() {
+            health_info.0 = format!("Health: {}", health.0);
         }
     }
 }
