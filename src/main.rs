@@ -1,3 +1,4 @@
+use crate::GameState::{GameOver, InGame};
 use bevy::input::keyboard::KeyboardInput;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
@@ -26,26 +27,37 @@ struct Health(usize);
 struct HealthInfo;
 
 #[derive(Resource)]
-struct GameState {
+struct GameData {
     spawn_timer: Timer,
+}
+
+#[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
+enum GameState {
+    InGame,
+    GameOver,
 }
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup)
-        .insert_resource(GameState {
+        .insert_resource(GameData {
             spawn_timer: Timer::from_seconds(SPAWN_INTERVAL, TimerMode::Repeating),
         })
-        .add_systems(Update, (jump, apply_gravity, player_movement))
-        .add_systems(Update, (spawn_obstacles, move_obstacles, detect_collision, render_health_info))
+        .insert_state(InGame)
+        .add_systems(Update, (jump, apply_gravity, player_movement)
+            .run_if(in_state(InGame)))
+        .add_systems(Update, (spawn_obstacles, move_obstacles, detect_collision)
+            .run_if(in_state(InGame)))
+        .add_systems(Update, render_health_info)
+        .add_systems(Update, game_over.run_if(in_state(GameOver)))
         .run();
 }
 
 fn setup(mut commands: Commands) {
     commands.spawn(Camera2d::default());
 
-    let initial_health = 10;
+    let initial_health = 3;
     // Player
     commands
         .spawn((
@@ -113,9 +125,9 @@ fn apply_gravity(time: Res<Time>, mut query: Query<&mut Velocity, With<Player>>)
 }
 
 fn spawn_obstacles(
-    time: Res<Time>,
-    mut state: ResMut<GameState>,
     mut commands: Commands,
+    time: Res<Time>,
+    mut state: ResMut<GameData>,
 ) {
     state.spawn_timer.tick(time.delta());
 
@@ -156,13 +168,17 @@ fn detect_collision(
     mut commands: Commands,
     mut player_query: Query<(&Transform, &mut Health), With<Player>>,
     obstacle_query: Query<(Entity, &Transform), With<Obstacle>>,
+    mut game_mod: ResMut<NextState<GameState>>,
 ) {
     if let Ok((player_transform, mut health)) = player_query.get_single_mut() {
         for (entity, obstacle_transform) in obstacle_query.iter() {
-            let collision = player_transform.translation.distance(obstacle_transform.translation) < 40.0;
+            let collision = player_transform.translation.distance(obstacle_transform.translation) < 50.0;
             if collision {
                 health.0 -= 1;
                 commands.entity(entity).despawn(); // Remove obstacle
+            }
+            if health.0 <= 0 {
+                game_mod.set(GameOver);
             }
         }
     }
@@ -177,4 +193,24 @@ fn render_health_info(
             health_info.0 = format!("Health: {}", health.0);
         }
     }
+}
+
+fn game_over(mut commands: Commands) {
+    commands.spawn((Node {
+        position_type: PositionType::Absolute,
+        left: Val::Percent(10.),
+        right: Val::Percent(10.),
+        top: Val::Percent(15.),
+        bottom: Val::Percent(15.),
+        justify_content: JustifyContent::Center,
+        ..default()
+    },))
+        .with_children(|builder| {
+            builder.spawn((
+                Text("GAME OVER".to_string()),
+                TextFont::from_font_size(160.0),
+                TextLayout::new_with_justify(JustifyText::Center).with_no_wrap(),
+                TextColor(Color::srgb(1.0, 0.0, 0.0)),
+            ));
+    });
 }
