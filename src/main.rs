@@ -4,12 +4,20 @@ use bevy::prelude::*;
 use bevy::sprite::Anchor;
 use rand::Rng;
 
+
+const GAME_SPEED: f32 = 400.0;
 const JUMP_FORCE: f32 = 600.0;
 const GRAVITY: f32 = -800.0;
-const GROUND_LEVEL: f32 = -100.0;
 const PLAYER_X: f32 = -300.0;
-const GAME_SPEED: f32 = 400.0;
+const PLAYER_SIZE: Vec2 = Vec2::new(30.0, 50.0);
+const PLAYER_COLOR: Color = Color::srgb(0.5, 1.0, 0.5);
 const SPAWN_INTERVAL: f32 = 1.0;
+const GROUND_LEVEL: f32 = -100.0;
+const GROUND_SIZE: Vec2 = Vec2::new(800.0, 10.0);
+const GROUND_EDGE: f32 = GROUND_SIZE.x / 2.0;
+const GROUND_COLOR: Color = Color::srgb(0.5, 0.5, 0.5);
+const OBSTACLE_SIZE: Vec2 = Vec2::new(30.0, 30.0);
+const OBSTACLE_COLOR: Color = Color::srgb(1.0, 0.0, 0.0);
 
 #[derive(Component)]
 struct Player;
@@ -63,8 +71,8 @@ fn setup(mut commands: Commands) {
         .spawn((
             Player,
             Sprite {
-                color: Color::srgb(0.5, 1.0, 0.5),
-                custom_size: Some(Vec2::new(30.0, 50.0)),
+                color: PLAYER_COLOR,
+                custom_size: Some(PLAYER_SIZE),
                 anchor: Anchor::BottomCenter,
                 ..default()
             },
@@ -82,12 +90,12 @@ fn setup(mut commands: Commands) {
     // Ground
     commands.spawn((
         Sprite {
-            color: Color::srgb(0.5, 0.5, 0.5),
-            custom_size: Some(Vec2::new(800.0, 10.0)),
+            color: GROUND_COLOR,
+            custom_size: Some(GROUND_SIZE),
             anchor: Anchor::TopLeft,
             ..default()
         },
-        Transform::from_xyz(-400.0, GROUND_LEVEL, 0.0)
+        Transform::from_xyz(-GROUND_EDGE, GROUND_LEVEL, 0.0)
     ));
 }
 
@@ -133,14 +141,14 @@ fn spawn_obstacles(
 
     if state.spawn_timer.finished() {
         let mut rng = rand::thread_rng();
-        let obstacle_x = 400.0;
+        let obstacle_x = GROUND_EDGE;
         let obstacle_y = GROUND_LEVEL + rng.gen_range(0.0..50.0);
 
         commands.spawn((
             Obstacle,
             Sprite {
-                color: Color::srgb(1.0, 0.0, 0.0),
-                custom_size: Some(Vec2::new(30.0, 30.0)),
+                color: OBSTACLE_COLOR,
+                custom_size: Some(OBSTACLE_SIZE),
                 anchor: Anchor::BottomCenter,
                 ..default()
             },
@@ -158,7 +166,7 @@ fn move_obstacles(
         transform.translation.x -= GAME_SPEED * time.delta_secs();
 
         // Remove obstacles once they're off-screen
-        if transform.translation.x < -400.0 {
+        if transform.translation.x < -GROUND_EDGE {
             commands.entity(entity).despawn();
         }
     }
