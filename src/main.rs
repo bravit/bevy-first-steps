@@ -55,10 +55,9 @@ fn main() {
         .insert_state(InGame)
         .add_systems(Update, (jump, apply_gravity, player_movement)
             .run_if(in_state(InGame)))
-        .add_systems(Update, (spawn_obstacles, move_obstacles, detect_collision)
+        .add_systems(Update, (spawn_obstacles, move_obstacles, detect_collision, render_health_info, check_health)
             .run_if(in_state(InGame)))
-        .add_systems(Update, render_health_info)
-        .add_systems(Update, game_over.run_if(in_state(GameOver)))
+        .add_systems(OnEnter(GameOver), game_over)
         .run();
 }
 
@@ -176,7 +175,6 @@ fn detect_collision(
     mut commands: Commands,
     mut player_query: Query<(&Transform, &mut Health), With<Player>>,
     obstacle_query: Query<(Entity, &Transform), With<Obstacle>>,
-    mut game_mod: ResMut<NextState<GameState>>,
 ) {
     if let Ok((player_transform, mut health)) = player_query.get_single_mut() {
         for (entity, obstacle_transform) in obstacle_query.iter() {
@@ -185,20 +183,17 @@ fn detect_collision(
                 health.0 -= 1;
                 commands.entity(entity).despawn(); // Remove obstacle
             }
-            if health.0 <= 0 {
-                game_mod.set(GameOver);
-            }
         }
     }
 }
 
-fn render_health_info(
-    player_query: Query<&mut Health, With<Player>>,
-    mut health_info_query: Query<&mut Text, With<HealthInfo>>,
+fn check_health(
+    player_query: Query<&Health, With<Player>>,
+    mut game_mod: ResMut<NextState<GameState>>
 ) {
-    if let Ok(mut health_info) = health_info_query.get_single_mut() {
-        if let Ok(health) = player_query.get_single() {
-            health_info.0 = format!("Health: {}", health.0);
+    if let Ok(Health(health)) = player_query.get_single() {
+        if *health == 0 {
+            game_mod.set(GameOver);
         }
     }
 }
@@ -220,5 +215,16 @@ fn game_over(mut commands: Commands) {
                 TextLayout::new_with_justify(JustifyText::Center).with_no_wrap(),
                 TextColor(Color::srgb(1.0, 0.0, 0.0)),
             ));
-    });
+        });
+}
+
+fn render_health_info(
+    player_query: Query<&mut Health, With<Player>>,
+    mut health_info_query: Query<&mut Text, With<HealthInfo>>,
+) {
+    if let Ok(mut health_info) = health_info_query.get_single_mut() {
+        if let Ok(health) = player_query.get_single() {
+            health_info.0 = format!("Health: {}", health.0);
+        }
+    }
 }
