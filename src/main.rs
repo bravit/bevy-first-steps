@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy::sprite::Anchor;
 use rand::Rng;
 
-
+//region Constants
 const GAME_SPEED: f32 = 400.0;
 const JUMP_FORCE: f32 = 600.0;
 const GRAVITY: f32 = -800.0;
@@ -18,7 +18,9 @@ const GROUND_EDGE: f32 = GROUND_SIZE.x / 2.0;
 const GROUND_COLOR: Color = Color::srgb(0.5, 0.5, 0.5);
 const OBSTACLE_SIZE: Vec2 = Vec2::new(30.0, 30.0);
 const OBSTACLE_COLOR: Color = Color::srgb(1.0, 0.0, 0.0);
+//endregion
 
+//region Components, resources, and states
 #[derive(Component)]
 struct Player;
 
@@ -44,6 +46,7 @@ enum GameState {
     InGame,
     GameOver,
 }
+//endregion
 
 fn main() {
     App::new()
