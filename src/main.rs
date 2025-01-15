@@ -2,7 +2,9 @@ use crate::GameState::{GameOver, InGame};
 use bevy::input::keyboard::KeyboardInput;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
-use rand::Rng;
+use bevy_prng::WyRand;
+use bevy_rand::prelude::{EntropyPlugin, GlobalEntropy};
+use rand_core::RngCore;
 
 //region Constants
 const GAME_SPEED: f32 = 400.0;
@@ -49,6 +51,7 @@ enum GameState {
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugins(EntropyPlugin::<WyRand>::default())
         .add_systems(Startup, setup)
         .insert_resource(ObstacleSpawningTimer(
                             Timer::from_seconds(SPAWN_INTERVAL, TimerMode::Repeating)))
@@ -135,13 +138,12 @@ fn spawn_obstacles(
     mut commands: Commands,
     time: Res<Time>,
     mut spawn_timer: ResMut<ObstacleSpawningTimer>,
+    mut rng: GlobalEntropy<WyRand>,
 ) {
     spawn_timer.0.tick(time.delta());
     if spawn_timer.0.finished() {
-        let mut rng = rand::thread_rng();
         let obstacle_x = GROUND_EDGE;
-        let obstacle_y = GROUND_LEVEL + rng.gen_range(0.0..50.0);
-
+        let obstacle_y = GROUND_LEVEL + (rng.next_u32() % 50) as f32;
         commands.spawn((
             Obstacle,
             Sprite {
