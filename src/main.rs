@@ -37,9 +37,7 @@ struct Health(usize);
 struct HealthInfo;
 
 #[derive(Resource)]
-struct GameData {
-    spawn_timer: Timer,
-}
+struct ObstacleSpawningTimer(Timer);
 
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
 enum GameState {
@@ -52,9 +50,8 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup)
-        .insert_resource(GameData {
-            spawn_timer: Timer::from_seconds(SPAWN_INTERVAL, TimerMode::Repeating),
-        })
+        .insert_resource(ObstacleSpawningTimer(
+                            Timer::from_seconds(SPAWN_INTERVAL, TimerMode::Repeating)))
         .insert_state(InGame)
         .add_systems(Update, (jump, apply_gravity, player_movement)
             .run_if(in_state(InGame)))
@@ -137,11 +134,10 @@ fn apply_gravity(time: Res<Time>, mut query: Query<&mut Velocity, With<Player>>)
 fn spawn_obstacles(
     mut commands: Commands,
     time: Res<Time>,
-    mut state: ResMut<GameData>,
+    mut spawn_timer: ResMut<ObstacleSpawningTimer>,
 ) {
-    state.spawn_timer.tick(time.delta());
-
-    if state.spawn_timer.finished() {
+    spawn_timer.0.tick(time.delta());
+    if spawn_timer.0.finished() {
         let mut rng = rand::thread_rng();
         let obstacle_x = GROUND_EDGE;
         let obstacle_y = GROUND_LEVEL + rng.gen_range(0.0..50.0);
