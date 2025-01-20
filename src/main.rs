@@ -190,11 +190,11 @@ fn detect_collision(
 
 fn check_health(
     player_query: Query<&Health, With<Player>>,
-    mut game_mod: ResMut<NextState<GameState>>
+    mut game_state: ResMut<NextState<GameState>>
 ) {
     if let Ok(Health(health)) = player_query.get_single() {
         if *health == 0 {
-            game_mod.set(GameOver);
+            game_state.set(GameOver);
         }
     }
 }
